@@ -22,7 +22,9 @@ class MyWindow(QMainWindow):
 
         # void OnEventConnect 통신 연결상태 변경시 이벤트
         self.kiwoom.OnEventConnect.connect(self.event_connect)
+        self.kiwoom.OnReceiveTrData.connect(self.receive_trdata)
 
+        self.getChartData("032860", 10)
 
     def event_connect(self, nErrCode):
         if nErrCode == 0:
@@ -31,6 +33,22 @@ class MyWindow(QMainWindow):
         elif nErrCode < 0:  # error
             self.text_edit.append("로그인 실패")
         self.text_edit.append(self.get_user_account)
+
+    def getChartData(self, index, interval=10):
+        # InputValue 셋업
+        self.kiwoom.dynamicCall("SetInputValue(QString, QString)", "종목코드", index)
+        self.kiwoom.dynamicCall("SetInputValue(QString, QString)", "틱범위", str(interval))
+        self.kiwoom.dynamicCall("SetInputValue(QString, QString)", "수정주가구분", "1")
+
+        ret = self.kiwoom.dynamicCall("CommRqData(QString, QString, int, QString)",
+                "opt10080_req", "opt10080", "0", "0101")
+        print("CommRqData 실시: ", ret)
+
+    def receive_trdata(self, screen_no, rqname, trcode, recordname, prev_next, data_len, err_code, msg1, msg2):
+        if rqname == "opt10080_req":    # 주식 분봉 차트 조회 요청
+            current = self.kiwoom.dynamicCall("CommGetData(QString, QString, QString, int, QString)",
+                    trcode, "", rqname, 0, "현재가")
+            print(current)
 
     @property
     def get_user_account(self):
