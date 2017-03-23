@@ -22,7 +22,11 @@ class MyWindow(QMainWindow):
 
         btn1 = QPushButton("getChartData", self)
         btn1.move(190, 10)
-        btn1.clicked.connect(self.getChartData)
+        btn1.clicked.connect(self.get_chart_data)
+
+        btn2 = QPushButton("sendOrder", self)
+        btn2.move(50, 10)
+        btn2.clicked.connect(self.send_order)
 
         # void OnEventConnect 통신 연결상태 변경시 이벤트
         self.kiwoom.OnEventConnect.connect(self.event_connect)
@@ -39,7 +43,7 @@ class MyWindow(QMainWindow):
             self.text_edit.append("로그인 실패")
         self.text_edit.append(self.get_user_account)
 
-    def getChartData(self):
+    def get_chart_data(self):
         # InputValue 셋업
         print("Running getChartData")
         self.kiwoom.dynamicCall("SetInputValue(QString, QString)", "종목코드", "032860")
@@ -49,6 +53,16 @@ class MyWindow(QMainWindow):
         ret = self.kiwoom.dynamicCall("CommRqData(QString, QString, int, QString)",
                 ["opt10080_req", "opt10080", "0", "0101"])
         print("CommRqData 실시: ", ret)
+
+    def send_order(self):
+        """
+        self.dynamicCall("SendOrder(QString, QString, QString, int, QString, int, int, QString, QString)",
+                         [rqname, screen_no, acc_no, order_type, code, quantity, price, hoga, order_no])
+        """
+        ret = self.kiwoom.dynamicCall("SendOrder(QString, QString, QString, int, QString, int, int, QString, QString)",
+                         ["rq0000", "1000", "8089008711", 1, "032860", 1, 0, "03", ""])
+        print("send_order 실행", ret)
+
 
     def receive_trdata(self, screen_no, rqname, trcode, recordname, prev_next, data_len, err_code, msg1, msg2):
         print("TR data received.", rqname)
