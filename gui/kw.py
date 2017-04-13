@@ -66,6 +66,7 @@ class Kiwoom(QAxWidget):
         return ret
 
     def _receive_tr_data(self, screen_no, rqname, trcode, record_name, next, unused1, unused2, unused3, unused4):
+        print("data received: ", QTime.currentTime().toString("hh:mm:ss"), " - ", rqname)
         if next == '2':
             self.remained_data = True
         else:
@@ -73,6 +74,10 @@ class Kiwoom(QAxWidget):
 
         if rqname == "opt10081_req":
             self._opt10081(rqname, trcode)
+        elif rqname == "opw00001_req":
+            self._opw00001(rqname, trcode)
+        elif rqname == "opw00018_req":
+            self._opw00018(rqname, trcode)
 
         try:
             self.tr_event_loop.exit()
@@ -97,12 +102,37 @@ class Kiwoom(QAxWidget):
             self.ohlcv['close'].append(int(close))
             self.ohlcv['volume'].append(int(volume))
 
+    def _opw00001(self, rqname, trcode):
+        """
+        예수금 상세정보 조회
+        :param rqname: 
+        :param trcode: 
+        :return: 
+        """
+        d2_deposit = self._comm_get_data(trcode, "", rqname, "d+2추정예수금")
+        self.d2_deposit = Kiwoom.change_format(d2_deposit)
+
+    def _opw00018(self, rqname, trcode):
+        total_purchase_price = self._comm_get_data(trcode, "", rqname, 0, "총매입금액")
+        total_eval_price = self._comm_get_data(trcode, "", rqname, 0, "총평가금액")
+        total_eval_profit_loss_price = self._comm_get_data(trcode, "", rqname, 0, "총평가손익금액")
+        total_earning_rate = self._comm_get_data(trcode, "", rqname, 0, "총수익률(%)")
+        estimated_deposit = self._comm_get_data(trcode, "", rqname, 0, "추정예탁자산")
+
+        print(Kiwoom.change_format(total_purchase_price))
+        print(Kiwoom.change_format(total_eval_price))
+        print(Kiwoom.change_format(total_eval_profit_loss_price))
+        print(Kiwoom.change_format(total_earning_rate))
+        print(Kiwoom.change_format(estimated_deposit))
+
     def send_order(self, rqname, screen_no, acc_no, order_type, code, quantity, price, hoga, order_no):
+        print("Kiwoom.send_order is called: ", rqname)
         self.dynamicCall("SendOrder(QString, QString, QString, int, QString, int, int, QString, QString)",
                          [rqname, screen_no, acc_no, order_type, code, quantity, price, hoga, order_no])
 
     def get_chejan_data(self, fid):
         ret = self.dynamicCall("GetChejanData(int)", fid)
+        print("체잔 확인 값: ", fid)
         return ret
 
     def _receive_chejan_data(self, gubun, item_cnt, fid_list):
@@ -116,3 +146,34 @@ class Kiwoom(QAxWidget):
         ret = self.dynamicCall("GetLoginInfo(QString)", tag)
         return ret
 
+
+    @staticmethod
+    def change_format(data):
+        strip_data = data.lstrip('-0')
+
+        if strip_data == '':
+            strip_data = '0'
+
+        format_data = format(int(strip_data), ',d')
+        if strip_data.startswith('-'):
+            format_data = '-' + format_data
+
+        return format_data
+
+
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    kiwoom = Kiwoom()
+    kiwoom.comm_connect()
+
+    """
+    # testing deposit
+    kiwoom.set_input_value("계좌번호", "8089008711")
+    kiwoom.set_input_value("비밀번호", "0000")
+    kiwoom.comm_rq_data("opw00001_req", "opw00001", 0, "2000")
+    time.sleep(3)
+    print(kiwoom.d2_deposit)
+    """
+
+    kiwoom.set_input_value("계좌번호", "8089008711")
+    kiwoom.comm_rq_data("opw00018_req", "opw00018", 0, "2000")
